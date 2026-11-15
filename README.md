@@ -1,12 +1,12 @@
 # Forecasting Voter Turnout Across Swedish Municipalities
 
-### Comparing statistical and machine-learning models across Swedish Riksdag elections, with a prospective evaluation on the 2026 election
+### Comparing statistical and machine-learning models across Swedish Riksdag elections, including a prospective evaluation of the 2026 election
 
 This project investigates whether pre-election socioeconomic and demographic characteristics can improve municipality-level voter-turnout forecasts beyond a simple historical-turnout baseline.
 
 Using data from Sweden's 290 municipalities, the project compares a historical-turnout baseline with Linear Regression, Decision Tree Regression, and Random Forest Regression. Models are evaluated using later elections as out-of-time test sets rather than random train-test splits.
 
-Prospective forecast:- Municipality-level predictions for the 2026 Swedish Riksdag election were generated and frozen on **9 September 2026**, before observed 2026 turnout was incorporated into the analysis.
+Prospective forecast: Municipality-level predictions for the 2026 Swedish Riksdag election were generated and frozen on **9 September 2026**, before the election. They are now evaluated against the official final municipality-level turnout results without retraining or modifying the frozen forecasts.
 
 ## Research question
 
@@ -16,10 +16,12 @@ Prospective forecast:- Municipality-level predictions for the 2026 Swedish Riksd
 
 - Municipal voter turnout shows strong persistence across elections.
 - Linear Regression and Random Forest substantially improved on the historical-turnout baseline when forecasting the 2018 election.
-- All fitted statistical and machine-learning models struggled with the election-wide turnout decline in 2022.
-- The simple historical-turnout baseline performed best in the 2022 out-of-time test.
-- Greater model flexibility did not automatically lead to better generalization across elections.
-- The 2026 municipality-level forecast has been frozen for prospective evaluation after the election.
+- The simple historical-turnout baseline performed best in the 2022 historical out-of-time test and again in the prospective 2026 evaluation.
+- In 2026, the baseline achieved **MAE = 0.714**, **RMSE = 0.966**, and **R² = 0.892**, outperforming Linear Regression, Decision Tree, and Random Forest at the municipality level.
+- The learned models systematically overpredicted 2026 turnout, with mean bias of approximately **+1.2 to +1.4 percentage points**, compared with **+0.144** for the baseline.
+- The learned models improved on the baseline in only about **18–20% of municipalities** in 2026.
+- Model performance varied substantially across election periods, providing no consistent evidence that the socioeconomic and demographic predictors used here improve future municipality-level turnout forecasts beyond a strong persistence baseline.
+- Greater nonlinear flexibility did not consistently improve temporal generalization.
 
 ## Study design
 
@@ -62,8 +64,9 @@ Raw source files are stored in `data/raw/`, while analysis-ready datasets produc
 | `scb_education_2012_2024.csv` | Post-secondary educational attainment | `higher_education_pct` |
 | `scb_average_age_2012_2024.csv` | Average age | `average_age` |
 | `scb_population_density_2012_2024.csv` | Population density | `population_density` |
+| `Val_2026_slutlig_00_RD.zip` | Official final 2026 Riksdag results from Valmyndigheten | 2026 municipality turnout, eligible voters, total votes |
 
-The voter-turnout data correspond to Statistics Sweden (SCB) matrix **ME0104B8**, *Voting rates in elections to the Riksdag, County Councils and Municipal Councils by region*. The original raw extracts are retained in the repository to support reproducibility.
+The historical voter-turnout data correspond to Statistics Sweden (SCB) matrix **ME0104B8**, *Voting rates in elections to the Riksdag, County Councils and Municipal Councils by region*. The original raw extracts are retained in the repository to support reproducibility.
 
 ### Processed datasets
 
@@ -73,7 +76,10 @@ The voter-turnout data correspond to Statistics Sweden (SCB) matrix **ME0104B8**
 - `data/processed/forecast_features_2026.csv`  
   Prospective 2026 forecasting dataset with **290 rows × 11 columns**.
 
-All cleaning, reshaping, year alignment, feature construction, and quality checks are performed in `notebooks/01_data_preparation.ipynb`.
+- `data/processed/actual_turnout_2026_municipalities.csv`  
+  Clean municipality-level 2026 turnout results extracted from the official final Valmyndigheten results, with **290 municipalities** and no missing or duplicate municipality codes.
+
+Historical data preparation is performed in `notebooks/01_data_preparation.ipynb`. The official 2026 result extraction and post-election checks are performed in `notebooks/05_post_election_evaluation.ipynb`.
 
 ## Predictors
 
@@ -113,7 +119,7 @@ Instead, models are evaluated using out-of-time election tests:
 |---|---|---|
 | Predict 2018 | 2014 election | 2018 election |
 | Predict 2022 | 2014 + 2018 elections | 2022 election |
-| Predict 2026 | 2014 + 2018 + 2022 elections | Future observed 2026 results |
+| Predict 2026 | 2014 + 2018 + 2022 elections | Observed 2026 results (prospective test) |
 
 Each election contributes observations for all 290 municipalities.
 
@@ -151,7 +157,7 @@ The historical-turnout baseline performed best in 2022.
 
 The fitted models systematically overpredicted turnout, showing that relationships that perform well in one election may fail when an election-wide shift occurs. The 2022 test therefore provides an important example of temporal distribution shift and calibration failure.
 
-Because only two historical out-of-time elections are available, these results should not be interpreted as establishing universal superiority of one model class.
+Because only two historical out-of-time elections are available before the prospective 2026 test, these historical results should not be interpreted as establishing universal superiority of one model class.
 
 ## Statistical analysis
 
@@ -193,7 +199,7 @@ The prospective municipality-level 2026 predictions were frozen on **9 September
 
 The predictive-modeling notebook contains overwrite protection: if the frozen file already exists, newly generated predictions are checked against it rather than silently replacing it.
 
-The frozen forecast should remain unchanged after observed 2026 election results become available. Any later model revisions should be stored separately as post-election or exploratory analyses.
+The frozen forecast remains unchanged after the 2026 election. Post-election evaluation uses the original frozen predictions exactly as generated before election day; any later model revisions should be stored separately as post-election or exploratory analyses.
 
 ## Repository structure
 
@@ -208,22 +214,30 @@ swedish-voter-turnout-forecast/
 │   │   ├── scb_unemployment_2024.csv
 │   │   ├── scb_education_2012_2024.csv
 │   │   ├── scb_average_age_2012_2024.csv
-│   │   └── scb_population_density_2012_2024.csv
+│   │   ├── scb_population_density_2012_2024.csv
+│   │   └── Val_2026_slutlig_00_RD.zip
 │   │
 │   └── processed/
 │       ├── master_model_dataset_2014_2022.csv
-│       └── forecast_features_2026.csv
+│       ├── forecast_features_2026.csv
+│       └── actual_turnout_2026_municipalities.csv
 │
 ├── notebooks/
 │   ├── 01_data_preparation.ipynb
 │   ├── 02_exploratory_data_analysis.ipynb
 │   ├── 03_statistical_analysis.ipynb
-│   └── 04_predictive_modeling.ipynb
+│   ├── 04_predictive_modeling.ipynb
+│   └── 05_post_election_evaluation.ipynb
 │
 ├── results/
 │   ├── historical_model_validation.csv
 │   ├── forecast_summary_2026.csv
-│   └── turnout_predictions_2026_frozen_2026-09-09.csv
+│   ├── turnout_predictions_2026_frozen_2026-09-09.csv
+│   ├── post_election_evaluation_2026.csv
+│   ├── post_election_metrics_2026.csv
+│   ├── weighted_aggregate_comparison_2026.csv
+│   ├── model_comparison_2018_2026.csv
+│   └── direction_diagnostics_2026.csv
 │
 ├── README.md
 ├── requirements.txt
@@ -238,6 +252,7 @@ Run the notebooks in numerical order:
 2. `02_exploratory_data_analysis.ipynb` — descriptive analysis, correlations, distributions, and multicollinearity checks
 3. `03_statistical_analysis.ipynb` — regression models, clustered standard errors, and joint hypothesis testing
 4. `04_predictive_modeling.ipynb` — temporal validation, final model training, and the frozen 2026 forecast
+5. `05_post_election_evaluation.ipynb` — extracts official 2026 results, evaluates the frozen forecasts, compares 2018/2022/2026 performance, and performs post-election diagnostics
 
 ## Reproducing the analysis
 
@@ -264,14 +279,73 @@ Then run the notebooks in numerical order from the `notebooks/` directory.
 ## Limitations
 
 - Only three historical target elections are available for model development.
-- Historical predictive performance can be evaluated on only two later elections: 2018 and 2022.
+- Model generalization is assessed on two historical out-of-time elections (2018 and 2022) plus one genuinely prospective election (2026), so the number of independent election periods remains small.
 - Election-wide political or social shocks are not directly represented by the municipality-level predictors.
 - The study is ecological: municipality-level associations cannot be interpreted as individual-level voting behaviour.
 - The analysis is predictive and observational rather than causal.
-- The 2026 figures shown here are municipality-level forecasts, not national population-weighted turnout forecasts.
+- The frozen 2026 forecast consists of municipality-level predictions. The retrospective weighted national aggregates use final 2026 eligible-voter counts and therefore should **not** be interpreted as national forecasts that were frozen before election day.
+- Poor 2022 and 2026 generalization is consistent with temporal distribution shift and calibration problems, but these results alone do not establish classical model overfitting.
 
 ## Post-election evaluation
 
-After observed 2026 municipality-level turnout becomes available, the frozen predictions will be evaluated using the same MAE, RMSE, and R² metrics used for the historical out-of-time tests.
+The frozen municipality-level predictions from **9 September 2026** were evaluated against the official final 2026 Riksdag municipality results without retraining or modifying the forecasts.
 
-The frozen September 2026 forecast will remain unchanged so that the prospective evaluation can distinguish genuine pre-election forecasting performance from post-election model revisions.
+### 2026 prospective municipality-level performance
+
+| Model | MAE | RMSE | R² | Bias |
+|---|---:|---:|---:|---:|
+| **Historical baseline** | **0.714** | **0.966** | **0.892** | **+0.144** |
+| Linear Regression | 1.512 | 1.858 | 0.602 | +1.231 |
+| Decision Tree | 1.535 | 1.838 | 0.611 | +1.336 |
+| Random Forest | 1.550 | 1.777 | 0.636 | +1.356 |
+
+The historical-turnout baseline clearly performed best at the municipality level in 2026. The learned models also showed substantial positive bias, overpredicting turnout by roughly **1.2–1.4 percentage points on average**.
+
+### Performance across elections
+
+The best model by MAE changed across election periods:
+
+| Election | Best model by MAE | MAE |
+|---:|---|---:|
+| 2018 | Random Forest | 0.583 |
+| 2022 | Historical baseline | 2.340 |
+| 2026 | Historical baseline | 0.714 |
+
+The learned models performed strongly in 2018 but did not maintain that advantage in 2022 or in the prospective 2026 test. This provides no consistent evidence that the socioeconomic and demographic predictors used in this project improve future municipality-level turnout forecasts beyond turnout persistence.
+
+### 2026 diagnostic findings
+
+The learned models adjusted the persistence baseline upward for most municipalities:
+
+| Model | Upward adjustment | Correct direction* | Better than baseline |
+|---|---:|---:|---:|
+| Linear Regression | 90.7% | 35.3% | 20.3% |
+| Decision Tree | 93.4% | 37.4% | 18.6% |
+| Random Forest | 96.2% | 35.3% | 17.9% |
+
+\*Direction is evaluated among the 289 municipalities whose official turnout changed relative to the previous election.
+
+Official turnout decreased in **190 of those 289 municipalities**, while the learned models overwhelmingly pushed predictions upward. Their adjustments therefore often moved in the wrong direction and improved on the frozen baseline in only about one fifth of municipalities.
+
+### Retrospective weighted aggregation
+
+The voter-weighted actual turnout reconstructed from municipality-level vote and eligible-voter totals was approximately **84.885%**.
+
+Using final 2026 eligible-voter counts to retrospectively weight the frozen municipality predictions gives:
+
+| Model | Weighted prediction | Aggregate error |
+|---|---:|---:|
+| Historical baseline | 84.188% | -0.697 pp |
+| Linear Regression | 85.078% | +0.193 pp |
+| Decision Tree | 85.349% | +0.464 pp |
+| Random Forest | 85.264% | +0.379 pp |
+
+Linear Regression happened to be closest to the overall weighted turnout after aggregation, even though the historical baseline was much more accurate across individual municipalities. This is possible because positive and negative municipality errors can cancel when aggregated.
+
+These weighted values are **retrospective aggregates of the frozen municipality forecasts**, not pre-election national forecasts, because the final 2026 eligible-voter counts used as weights were incorporated after the election.
+
+### Overall interpretation
+
+The prospective 2026 evaluation strengthens the central conclusion of the project: statistical association does not automatically translate into stable future forecasting value. Socioeconomic and demographic variables were associated with municipal turnout in the historical regression analysis, but the learned forecasting models did not consistently outperform a strong persistence baseline across elections.
+
+The 2018, 2022, and 2026 results together point to temporal instability and calibration challenges rather than a universally superior model class. Greater nonlinear flexibility did not consistently improve generalization, and the small number of independent election periods means these findings should be interpreted cautiously.
